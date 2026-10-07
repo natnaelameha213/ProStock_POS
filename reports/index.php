@@ -1,0 +1,11 @@
+<?php
+require_once __DIR__.'/../config/database.php'; require_once __DIR__.'/../config/auth.php';
+$from=$_GET['from']??date('Y-m-01');$to=$_GET['to']??date('Y-m-d');
+$st=$pdo->prepare("SELECT COALESCE(SUM(total),0) revenue,COUNT(*) orders,COALESCE(SUM(discount),0) discounts FROM sales WHERE status='completed' AND DATE(sale_date) BETWEEN ? AND ?");$st->execute([$from,$to]);$sum=$st->fetch();
+$st=$pdo->prepare("SELECT COALESCE(SUM((si.unit_price-si.cost_price)*si.quantity),0) profit FROM sale_items si JOIN sales s ON s.id=si.sale_id WHERE s.status='completed' AND DATE(s.sale_date) BETWEEN ? AND ?");$st->execute([$from,$to]);$profit=$st->fetch()['profit'];
+$st=$pdo->prepare("SELECT p.name,SUM(si.quantity) qty,SUM(si.total) revenue FROM sale_items si JOIN products p ON p.id=si.product_id JOIN sales s ON s.id=si.sale_id WHERE s.status='completed' AND DATE(s.sale_date) BETWEEN ? AND ? GROUP BY p.id ORDER BY qty DESC LIMIT 10");$st->execute([$from,$to]);$top=$st->fetchAll();$page_title='Reports';require __DIR__.'/../partials/header.php';?>
+<h3 class="fw-bold">Reports</h3><p class="text-muted">Sales and profit analytics.</p>
+<div class="card p-3 mb-3"><form class="row g-2"><div class="col-md-4"><label class="small">From</label><input class="form-control" type="date" name="from" value="<?=$from?>"></div><div class="col-md-4"><label class="small">To</label><input class="form-control" type="date" name="to" value="<?=$to?>"></div><div class="col-md-2 align-self-end"><button class="btn btn-primary w-100">Apply</button></div></form></div>
+<div class="row g-3 mb-3"><?php foreach([['Revenue','$'.money($sum['revenue'])],['Orders',$sum['orders']],['Profit','$'.money($profit)],['Discounts','$'.money($sum['discounts'])]] as $x):?><div class="col-6 col-xl-3"><div class="card p-3"><div class="text-muted small"><?=$x[0]?></div><div class="stat-number"><?=$x[1]?></div></div></div><?php endforeach;?></div>
+<div class="card"><div class="card-header bg-white"><strong>Top Selling Products</strong></div><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Product</th><th>Units Sold</th><th>Revenue</th></tr></thead><tbody><?php foreach($top as $t):?><tr><td><?=e($t['name'])?></td><td><?=$t['qty']?></td><td>$<?=money($t['revenue'])?></td></tr><?php endforeach;?></tbody></table></div></div>
+<?php require __DIR__.'/../partials/footer.php';?>

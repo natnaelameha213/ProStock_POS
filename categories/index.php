@@ -1,0 +1,8 @@
+<?php
+require_once __DIR__.'/../config/database.php'; require_once __DIR__.'/../config/auth.php';
+if($_SERVER['REQUEST_METHOD']==='POST'){ $name=trim($_POST['name']); if($name){$pdo->prepare("INSERT INTO categories(name) VALUES(?)")->execute([$name]);flash('success','Category added.');} header("Location:index.php");exit; }
+if(isset($_GET['delete'])){$pdo->prepare("DELETE FROM categories WHERE id=?")->execute([(int)$_GET['delete']]);flash('success','Category deleted.');header("Location:index.php");exit;}
+$rows=$pdo->query("SELECT c.*,COUNT(p.id) products FROM categories c LEFT JOIN products p ON p.category_id=c.id GROUP BY c.id ORDER BY c.name")->fetchAll();$page_title='Categories';require __DIR__.'/../partials/header.php';?>
+<div class="d-flex justify-content-between mb-3"><div><h3 class="fw-bold">Categories</h3><p class="text-muted">Organize your products.</p></div></div>
+<div class="row g-3"><div class="col-md-4"><div class="card p-3"><h6>Add Category</h6><form method="post"><input class="form-control mb-2" name="name" required placeholder="Category name"><button class="btn btn-primary w-100">Add</button></form></div></div><div class="col-md-8"><div class="card"><div class="table-responsive"><table class="table mb-0"><thead><tr><th>Category</th><th>Products</th><th></th></tr></thead><tbody><?php foreach($rows as $r):?><tr><td><?=e($r['name'])?></td><td><?=$r['products']?></td><td class="text-end"><a onclick="return confirmDelete()" class="btn btn-sm btn-outline-danger" href="?delete=<?=$r['id']?>">Delete</a></td></tr><?php endforeach;?></tbody></table></div></div></div></div>
+<?php require __DIR__.'/../partials/footer.php';?>
